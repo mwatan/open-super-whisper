@@ -1,7 +1,10 @@
-"""
-OpenAI APIキー設定用のダイアログモジュール
+"""src.gui.components.dialogs.api_key_dialog
 
-APIキーの入力、保存、表示を管理するダイアログウィンドウを提供します
+Azure OpenAI 設定用のダイアログ。
+
+従来は OpenAI API キーのみを扱っていましたが、Azure OpenAI では
+`Endpoint` と `api-version`（および必要に応じて `Deployment`）が必要なため、
+それらもまとめて入力できるようにしています。
 """
 
 from PyQt6.QtWidgets import (
@@ -15,12 +18,12 @@ from src.gui.resources.styles import AppStyles
 
 class APIKeyDialog(QDialog):
     """
-    OpenAI APIキーを入力するためのダイアログ
+    Azure OpenAI 設定を入力するためのダイアログ
     
     APIキーの入力、保存、表示を管理するダイアログウィンドウ
     """
     
-    def __init__(self, parent=None, api_key=None):
+    def __init__(self, parent=None, api_key=None, endpoint=None, api_version=None, deployment=None):
         """
         APIKeyDialogの初期化
         
@@ -29,7 +32,13 @@ class APIKeyDialog(QDialog):
         parent : QWidget, optional
             親ウィジェット
         api_key : str, optional
-            初期表示するAPIキー
+            初期表示する Azure OpenAI APIキー
+        endpoint : str, optional
+            初期表示する Azure OpenAI Endpoint
+        api_version : str, optional
+            初期表示する Azure OpenAI API Version
+        deployment : str, optional
+            初期表示する Deployment 名（任意）
         """
         super().__init__(parent)
         self.setWindowTitle(AppLabels.API_KEY_DIALOG_TITLE)
@@ -45,6 +54,25 @@ class APIKeyDialog(QDialog):
         # APIキー入力
         form_layout = QFormLayout()
         form_layout.setSpacing(10)
+
+        self.endpoint_input = QLineEdit()
+        if endpoint:
+            self.endpoint_input.setText(endpoint)
+        self.endpoint_input.setPlaceholderText("https://{resource}.openai.azure.com/")
+        form_layout.addRow(AppLabels.API_ENDPOINT_LABEL, self.endpoint_input)
+
+        self.api_version_input = QLineEdit()
+        if api_version:
+            self.api_version_input.setText(api_version)
+        self.api_version_input.setPlaceholderText("2024-02-15-preview")
+        form_layout.addRow(AppLabels.API_VERSION_LABEL, self.api_version_input)
+
+        self.deployment_input = QLineEdit()
+        if deployment:
+            self.deployment_input.setText(deployment)
+        self.deployment_input.setPlaceholderText("(空でOK) 例: whisper-1")
+        form_layout.addRow(AppLabels.API_DEPLOYMENT_LABEL, self.deployment_input)
+
         self.api_key_input = QLineEdit()
         if api_key:
             self.api_key_input.setText(api_key)
@@ -85,3 +113,15 @@ class APIKeyDialog(QDialog):
             入力されたAPIキー
         """
         return self.api_key_input.text() 
+
+    def get_endpoint(self):
+        """入力された Azure OpenAI Endpoint を返す"""
+        return self.endpoint_input.text().strip()
+
+    def get_api_version(self):
+        """入力された Azure OpenAI API Version を返す"""
+        return self.api_version_input.text().strip()
+
+    def get_deployment(self):
+        """入力された Deployment 名（任意）を返す"""
+        return self.deployment_input.text().strip()

@@ -13,7 +13,11 @@ class AppConfig:
     APP_ORGANIZATION = "OpenSuperWhisper"
     
     # 認証設定
-    DEFAULT_API_KEY = ""
+    # NOTE: 互換性のため設定キー自体は main_window.py 側で "api_key" を引き続き使用します。
+    DEFAULT_API_KEY = ""  # Azure OpenAI API Key
+    DEFAULT_AZURE_OPENAI_ENDPOINT = ""  # e.g. https://{resource}.openai.azure.com/
+    DEFAULT_AZURE_OPENAI_API_VERSION = "2024-02-15-preview"
+    DEFAULT_AZURE_OPENAI_DEPLOYMENT = ""  # 空の場合は「選択モデルID」を deployment 名として使用
     
     # 機能設定
     DEFAULT_HOTKEY = "ctrl+shift+r"
