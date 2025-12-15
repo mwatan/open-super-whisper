@@ -51,9 +51,18 @@ class AppLabels:
     STATUS_MODEL_CHANGED = "文字起こしモデルを「{0}」に変更しました"
     
     # APIキーダイアログ
-    API_KEY_DIALOG_TITLE = "OpenAI APIキー"
+    API_KEY_DIALOG_TITLE = "Azure OpenAI 設定"
     API_KEY_LABEL = "APIキー:"
-    API_KEY_INFO = "このアプリケーションを使用するにはOpenAI APIキーが必要です。お持ちでない場合は、https://platform.openai.com/api-keys から取得できます。"
+    API_ENDPOINT_LABEL = "Endpoint:"
+    API_VERSION_LABEL = "API Version:"
+    API_DEPLOYMENT_LABEL = "Deployment (任意):"
+    API_KEY_INFO = (
+        "このアプリケーションを使用するには Azure OpenAI の設定が必要です。\n"
+        "- APIキー: Azure OpenAI リソースのキー\n"
+        "- Endpoint: https://{resource}.openai.azure.com/\n"
+        "- API Version: 利用する api-version\n"
+        "- Deployment: 空の場合は、選択したモデルIDを deployment 名として使用します"
+    )
     SAVE_BUTTON = "保存"
     CANCEL_BUTTON = "キャンセル"
     
@@ -99,11 +108,14 @@ class AppLabels:
     
     # エラーメッセージ
     ERROR_TITLE = "エラー"
-    ERROR_API_KEY_REQUIRED = "先にAPIキーを設定してください"
+    ERROR_API_KEY_REQUIRED = "先に Azure OpenAI の設定を行ってください"
     ERROR_SYSTEM_TRAY = "システムトレイがサポートされていません。"
     ERROR_HOTKEY = "ホットキー設定エラー: {0}"
     ERROR_TRANSCRIPTION = "文字起こしエラー: {0}"
-    ERROR_API_KEY_MISSING = "OpenAI APIキーが必要です。直接入力するか、OPENAI_API_KEY環境変数を設定してください。"
+    ERROR_API_KEY_MISSING = (
+        "Azure OpenAI の設定が必要です。\n"
+        "APIキーと Endpoint を入力するか、AZURE_OPENAI_API_KEY / AZURE_OPENAI_ENDPOINT 環境変数を設定してください。"
+    )
     
     # 情報メッセージ
     INFO_TITLE = "情報"

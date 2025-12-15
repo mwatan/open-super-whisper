@@ -45,6 +45,9 @@ class MainWindow(QMainWindow):
         # 設定の読み込み
         self.settings = QSettings(AppConfig.APP_ORGANIZATION, AppConfig.APP_NAME)
         self.api_key = self.settings.value("api_key", AppConfig.DEFAULT_API_KEY)
+        self.azure_endpoint = self.settings.value("azure_endpoint", AppConfig.DEFAULT_AZURE_OPENAI_ENDPOINT)
+        self.azure_api_version = self.settings.value("azure_api_version", AppConfig.DEFAULT_AZURE_OPENAI_API_VERSION)
+        self.azure_deployment = self.settings.value("azure_deployment", AppConfig.DEFAULT_AZURE_OPENAI_DEPLOYMENT)
         
         # ホットキーとクリップボード設定
         self.hotkey = self.settings.value("hotkey", AppConfig.DEFAULT_HOTKEY)
@@ -79,7 +82,12 @@ class MainWindow(QMainWindow):
         # 初期状態では表示しない - 録音開始時に表示する
         
         try:
-            self.whisper_transcriber = WhisperTranscriber(api_key=self.api_key)
+            self.whisper_transcriber = WhisperTranscriber(
+                api_key=self.api_key,
+                azure_endpoint=self.azure_endpoint,
+                api_version=self.azure_api_version,
+                azure_deployment=self.azure_deployment,
+            )
         except ValueError:
             self.whisper_transcriber = None
         
@@ -90,8 +98,8 @@ class MainWindow(QMainWindow):
         self.transcription_complete.connect(self.on_transcription_complete)
         self.recording_status_changed.connect(self.update_recording_status)
         
-        # APIキーの確認
-        if not self.api_key:
+        # Azure OpenAI 設定の確認
+        if not self.api_key or not self.azure_endpoint:
             self.show_api_key_dialog()
             
         # 追加の接続設定
@@ -336,18 +344,35 @@ class MainWindow(QMainWindow):
     
     def show_api_key_dialog(self):
         """
-        OpenAI APIキー入力ダイアログを表示する
+        Azure OpenAI 設定入力ダイアログを表示する
         
-        APIキーの入力、保存、検証を行うダイアログを表示します。
+        APIキー/Endpoint/api-version/Deployment の入力、保存、検証を行うダイアログを表示します。
         """
-        dialog = APIKeyDialog(self, self.api_key)
+        dialog = APIKeyDialog(
+            self,
+            api_key=self.api_key,
+            endpoint=self.azure_endpoint,
+            api_version=self.azure_api_version,
+            deployment=self.azure_deployment,
+        )
         if dialog.exec():
             self.api_key = dialog.get_api_key()
+            self.azure_endpoint = dialog.get_endpoint()
+            self.azure_api_version = dialog.get_api_version()
+            self.azure_deployment = dialog.get_deployment()
             self.settings.setValue("api_key", self.api_key)
+            self.settings.setValue("azure_endpoint", self.azure_endpoint)
+            self.settings.setValue("azure_api_version", self.azure_api_version)
+            self.settings.setValue("azure_deployment", self.azure_deployment)
             
             # 新しいAPIキーでトランスクライバーを再初期化
             try:
-                self.whisper_transcriber = WhisperTranscriber(api_key=self.api_key)
+                self.whisper_transcriber = WhisperTranscriber(
+                    api_key=self.api_key,
+                    azure_endpoint=self.azure_endpoint,
+                    api_version=self.azure_api_version,
+                    azure_deployment=self.azure_deployment,
+                )
                 self.status_bar.showMessage(AppLabels.STATUS_API_KEY_SAVED, 3000)
             except ValueError as e:
                 self.whisper_transcriber = None

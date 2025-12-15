@@ -3,6 +3,11 @@ import json
 from pathlib import Path
 import openai
 
+try:
+    from openai import AzureOpenAI
+except Exception:  # pragma: no cover
+    AzureOpenAI = None
+
 
 class WhisperTranscriber:
     """
@@ -19,23 +24,43 @@ class WhisperTranscriber:
         {"id": "gpt-4o-mini-transcribe", "name": "GPT-4o Mini Transcribe", "description": "Lightweight and fast transcription model"}
     ]
     
-    def __init__(self, api_key=None):
+    def __init__(self, api_key=None, azure_endpoint=None, api_version=None, azure_deployment=None):
         """
         Whisper文字起こしクラスの初期化
         
         Parameters
         ----------
         api_key : str, optional
-            OpenAI APIキー。提供されない場合はOPENAI_API_KEY環境変数から取得を試みます。
+            Azure OpenAI APIキー。提供されない場合はAZURE_OPENAI_API_KEY環境変数から取得を試みます。
+        azure_endpoint : str, optional
+            Azure OpenAI Endpoint。提供されない場合はAZURE_OPENAI_ENDPOINT環境変数から取得を試みます。
+        api_version : str, optional
+            Azure OpenAI API Version。提供されない場合はAZURE_OPENAI_API_VERSION環境変数から取得を試みます。
+        azure_deployment : str, optional
+            Azure OpenAI の Deployment 名（任意）。指定がなければ `model` 設定値を deployment 名として使用します。
         """
-        # 提供されたAPIキーを使用するか、環境から取得
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY")
-        
-        if not self.api_key:
-            raise ValueError("OpenAI API key is required. Please provide it directly or set the OPENAI_API_KEY environment variable.")
-        
-        # OpenAIクライアントの初期化
-        self.client = openai.OpenAI(api_key=self.api_key)
+        # 提供された API キーを使用するか、環境から取得
+        # 互換性のため OPENAI_API_KEY もフォールバックとして許可
+        self.api_key = api_key or os.getenv("AZURE_OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
+        self.azure_endpoint = azure_endpoint or os.getenv("AZURE_OPENAI_ENDPOINT")
+        self.api_version = api_version or os.getenv("AZURE_OPENAI_API_VERSION") or "2024-02-15-preview"
+        self.azure_deployment = azure_deployment or os.getenv("AZURE_OPENAI_DEPLOYMENT")
+
+        if not self.api_key or not self.azure_endpoint:
+            raise ValueError(
+                "Azure OpenAI settings are required. Provide api_key + azure_endpoint, "
+                "or set AZURE_OPENAI_API_KEY / AZURE_OPENAI_ENDPOINT environment variables."
+            )
+
+        if AzureOpenAI is None:
+            raise ValueError("openai package does not support AzureOpenAI client in this environment.")
+
+        # Azure OpenAI クライアントの初期化
+        self.client = AzureOpenAI(
+            api_key=self.api_key,
+            azure_endpoint=self.azure_endpoint,
+            api_version=self.api_version,
+        )
         
         # デフォルトパラメータの設定
         self.model = "whisper-1"  # 使用するWhisperモデル
@@ -179,7 +204,8 @@ class WhisperTranscriber:
             
             # API呼び出し用のパラメータを構築
             params = {
-                "model": self.model,
+                # Azure OpenAI では model は deployment 名
+                "model": (self.azure_deployment or self.model),
                 "response_format": response_format,
             }
             
@@ -202,11 +228,18 @@ class WhisperTranscriber:
                 
             # 要求されたフォーマットに基づいてレスポンスを処理
             if response_format == "json" or response_format == "verbose_json":
-                # JSONレスポンスフォーマットの場合、レスポンステキストを解析
-                return json.loads(response)
+                # SDK の戻り値はモデルオブジェクトの場合があるため安全に dict 化
+                if hasattr(response, "model_dump"):
+                    return response.model_dump()
+                if isinstance(response, (dict, list)):
+                    return response
+                try:
+                    return json.loads(response)
+                except Exception:
+                    return {"text": getattr(response, "text", str(response))}
             else:
-                # テキスト、srt、vttの場合は文字列を返す
-                return str(response)
+                # text/srt/vtt は文字列または text 属性として取得できる
+                return getattr(response, "text", str(response))
                 
         except Exception as e:
             print(f"Error occurred during transcription: {e}")
